@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --cyan: #00f5ff;
+  --cyan-dim: rgba(0, 245, 255, 0.4);
+  --cyan-faint: rgba(0, 245, 255, 0.08);
+  --navy: #0a0f1c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0f1c;
+  font-family: 'Orbitron', monospace;
+  color: #00f5ff;
+}
+
+.hud-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+@keyframes scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+.scanline {
+  position: fixed; left: 0; width: 100%; height: 3px;
+  background: linear-gradient(transparent, rgba(0,245,255,0.15), transparent);
+  pointer-events: none; z-index: 1;
+  animation: scan 7s linear infinite;
+}
+
+.neon { color: #00f5ff; text-shadow: 0 0 7px #00f5ff, 0 0 20px rgba(0,245,255,0.5); }
+.neon-sm { color: #00f5ff; text-shadow: 0 0 5px rgba(0,245,255,0.7); }
+
+.panel {
+  background: rgba(0,20,40,0.8);
+  border: 1px solid rgba(0,245,255,0.2);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 25px rgba(0,245,255,0.06), inset 0 0 15px rgba(0,245,255,0.02);
+  border-radius: 3px;
+  position: relative;
+}
+.panel::before {
+  content: '';
+  position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,245,255,0.5), transparent);
+}
+
+@keyframes spin-cw  { to { transform: rotate(360deg);  } }
+@keyframes spin-ccw { to { transform: rotate(-360deg); } }
+@keyframes pulse-ring {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.03); }
+}
+@keyframes flicker {
+  0%,89%,91%,95%,100% { opacity: 1; }
+  90%  { opacity: 0.3; }
+  93%  { opacity: 0.7; }
+}
+@keyframes eq1 { 0%,100%{height:4px}  50%{height:22px} }
+@keyframes eq2 { 0%,100%{height:14px} 50%{height:6px}  }
+@keyframes eq3 { 0%,100%{height:8px}  50%{height:24px} }
+@keyframes eq4 { 0%,100%{height:18px} 50%{height:4px}  }
+@keyframes eq5 { 0%,100%{height:10px} 50%{height:18px} }
+@keyframes data-scroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
