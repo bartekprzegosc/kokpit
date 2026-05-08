@@ -1,6 +1,32 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
+// Priority list of deep male en-GB voices (closest to JARVIS)
+const PREFERRED_VOICES = [
+  'google uk english male',
+  'daniel',          // macOS en-GB deep male
+  'arthur',          // macOS en-GB (newer)
+  'james',
+  'oliver',
+  'microsoft george', // Windows en-GB
+  'microsoft ryan',
+  'reed',
+  'alex',
+  'fred',
+]
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  for (const name of PREFERRED_VOICES) {
+    const match = voices.find(v => v.name.toLowerCase().includes(name))
+    if (match) return match
+  }
+  // Fallback: any en-GB voice
+  const gbVoice = voices.find(v => v.lang === 'en-GB')
+  if (gbVoice) return gbVoice
+  // Fallback: any English voice
+  return voices.find(v => v.lang.startsWith('en')) || voices[0] || null
+}
+
 export default function JarvisVoice({ onBoot }: { onBoot: () => void }) {
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
@@ -14,19 +40,44 @@ export default function JarvisVoice({ onBoot }: { onBoot: () => void }) {
     'WELCOME BACK, SIR.',
   ]
 
-  const speech = `Good ${getGreeting()}. All systems are online and operating within normal parameters.
-    You have ${getProjects()} active projects in the pipeline.
-    Current atmospheric conditions are being monitored.
-    Arc reactor power at one hundred percent.
-    Awaiting your instructions, sir.`
-
-  function getGreeting() {
+  function buildSpeech() {
     const h = new Date().getHours()
-    return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
+    const greeting = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
+    return `Good ${greeting}, sir. All systems are online and operating within normal parameters. ` +
+      `You have four active projects in the pipeline. ` +
+      `Arc reactor power at one hundred percent. ` +
+      `Atmospheric conditions are being monitored. ` +
+      `Standing by for your instructions.`
   }
 
-  function getProjects() {
-    return 'four'
+  function speak() {
+    if (spoken.current) return
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    spoken.current = true
+
+    function doSpeak() {
+      const voices = window.speechSynthesis.getVoices()
+      const utt = new SpeechSynthesisUtterance(buildSpeech())
+      utt.rate = 0.82      // slightly slower = more authoritative
+      utt.pitch = 0.55     // lower pitch = deeper voice
+      utt.volume = 1.0
+
+      const voice = pickVoice(voices)
+      if (voice) utt.voice = voice
+
+      window.speechSynthesis.cancel() // clear queue
+      window.speechSynthesis.speak(utt)
+    }
+
+    // Voices may not be loaded yet — wait for them
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      setTimeout(doSpeak, 700)
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        setTimeout(doSpeak, 700)
+      }
+    }
   }
 
   useEffect(() => {
@@ -39,25 +90,7 @@ export default function JarvisVoice({ onBoot }: { onBoot: () => void }) {
         clearInterval(id)
         setDone(true)
         onBoot()
-        if (!spoken.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-          spoken.current = true
-          setTimeout(() => {
-            const utt = new SpeechSynthesisUtterance(speech)
-            utt.rate = 0.9
-            utt.pitch = 0.7
-            utt.volume = 0.9
-            // Try to find a deep male voice
-            const voices = window.speechSynthesis.getVoices()
-            const preferred = voices.find(v =>
-              v.name.toLowerCase().includes('daniel') ||
-              v.name.toLowerCase().includes('alex') ||
-              v.name.toLowerCase().includes('male') ||
-              v.lang === 'en-GB'
-            ) || voices.find(v => v.lang.startsWith('en')) || voices[0]
-            if (preferred) utt.voice = preferred
-            window.speechSynthesis.speak(utt)
-          }, 600)
-        }
+        speak()
       }
     }, 380)
     return () => clearInterval(id)
@@ -66,18 +99,28 @@ export default function JarvisVoice({ onBoot }: { onBoot: () => void }) {
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       {lines.map((line, i) => (
-        <div key={i} className="text-xs" style={{
-          color: i === lines.length - 1 ? '#00f5ff' : 'rgba(0,245,255,0.5)',
+        <div key={i} style={{
+          fontSize: 11,
+          color: i === lines.length - 1 ? '#00f5ff' : 'rgba(0,245,255,0.45)',
           letterSpacing: 2,
           textShadow: i === lines.length - 1 ? '0 0 8px #00f5ff' : 'none',
-          marginBottom: 2,
+          marginBottom: 3,
         }}>
           &gt; {line}
           {i === lines.length - 1 && !done && (
-            <span style={{animation:'flicker 0.8s infinite'}}>_</span>
+            <span style={{animation:'flicker 0.8s infinite', marginLeft: 2}}>_</span>
           )}
         </div>
       ))}
+      {done && (
+        <div style={{
+          fontSize: 9, color: 'rgba(0,245,255,0.3)',
+          letterSpacing: 1.5, marginTop: 6,
+          fontFamily: 'Orbitron',
+        }}>
+          VOICE: EN-GB MALE // PITCH: LOW // READY
+        </div>
+      )}
     </div>
   )
 }
