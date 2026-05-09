@@ -11,10 +11,19 @@
 
 html, body {
   width: 100%; height: 100%;
-  overflow: hidden;
   background: #0a0f1c;
   font-family: 'Orbitron', monospace;
   color: #00f5ff;
+}
+
+/* Desktop: fixed full-screen layout */
+@media (min-width: 768px) {
+  html, body { overflow: hidden; }
+}
+
+/* Mobile: scrollable */
+@media (max-width: 767px) {
+  html, body { overflow-y: auto; overflow-x: hidden; height: auto; min-height: 100%; }
 }
 
 .hud-grid {
@@ -74,4 +83,82 @@ html, body {
 @keyframes data-scroll {
   0%   { transform: translateY(0); }
   100% { transform: translateY(-50%); }
+}
+
+/* ── Responsive layout ── */
+.kokpit-root {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+@media (max-width: 767px) {
+  .kokpit-root {
+    position: relative; min-height: 100dvh;
+    overflow-y: auto; overflow-x: hidden;
+  }
+}
+
+.kokpit-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px; padding: 8px;
+  min-height: 0;
+}
+@media (max-width: 1024px) and (min-width: 768px) {
+  .kokpit-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, auto);
+    grid-template-areas:
+      "clock  jarvis"
+      "weather reactor"
+      "calendar projects";
+  }
+  .kokpit-cell-clock    { grid-area: clock; }
+  .kokpit-cell-jarvis   { grid-area: jarvis; }
+  .kokpit-cell-weather  { grid-area: weather; }
+  .kokpit-cell-reactor  { grid-area: reactor; min-height: 220px; }
+  .kokpit-cell-calendar { grid-area: calendar; }
+  .kokpit-cell-projects { grid-area: projects; }
+}
+@media (max-width: 767px) {
+  .kokpit-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "jarvis"
+      "clock"
+      "weather"
+      "reactor"
+      "calendar"
+      "projects";
+    padding: 6px;
+    gap: 6px;
+  }
+  .kokpit-cell-clock    { grid-area: clock; }
+  .kokpit-cell-jarvis   { grid-area: jarvis; }
+  .kokpit-cell-weather  { grid-area: weather; }
+  .kokpit-cell-reactor  { grid-area: reactor; min-height: 200px; }
+  .kokpit-cell-calendar { grid-area: calendar; }
+  .kokpit-cell-projects { grid-area: projects; }
+}
+
+/* Top/bottom bar responsive */
+.kokpit-topbar, .kokpit-bottombar {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: rgba(0,10,20,0.6);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0; z-index: 10;
+}
+.kokpit-topbar  { border-bottom: 1px solid rgba(0,245,255,0.1); }
+.kokpit-bottombar { border-top: 1px solid rgba(0,245,255,0.1); }
+
+@media (max-width: 767px) {
+  .kokpit-topbar, .kokpit-bottombar { padding: 6px 12px; }
+  .kokpit-topbar-systems { display: none; }  /* hide system status dots on mobile */
+  .kokpit-bottombar-label { display: none; } /* hide STARK INDUSTRIES label */
+  .kokpit-bottombar { flex-wrap: wrap; gap: 4px; }
 }
