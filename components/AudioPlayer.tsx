@@ -21,6 +21,7 @@ const AudioPlayer = forwardRef<AudioPlayerHandle, {}>(
       unmute() {
         const a = audioRef.current
         if (!a) return
+        a.currentTime = 3
         a.volume = vol / 100
         a.muted = false
         a.play().catch(() => {/* blocked — user can click PLAY manually */})
