@@ -162,3 +162,27 @@ html, body {
   .kokpit-bottombar-label { display: none; } /* hide STARK INDUSTRIES label */
   .kokpit-bottombar { flex-wrap: wrap; gap: 4px; }
 }
+
+/* iOS Safari range input fix */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  touch-action: none;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  background: rgba(0, 245, 255, 0.25);
+  border-radius: 2px;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00f5ff;
+  box-shadow: 0 0 6px #00f5ff;
+  margin-top: -5px;
+  cursor: pointer;
+}

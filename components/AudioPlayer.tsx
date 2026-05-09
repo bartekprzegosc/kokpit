@@ -100,7 +100,12 @@ const AudioPlayer = forwardRef<AudioPlayerHandle, {}>(
           <span style={{ color: 'rgba(0,245,255,0.4)', fontSize: 9, fontFamily: 'Orbitron' }}>VOL</span>
           <input type="range" min="0" max="100" step="5" value={vol}
             onChange={e => changeVol(parseInt(e.target.value))}
-            style={{ width: 70, accentColor: '#00f5ff', cursor: 'pointer' }}
+            onTouchStart={e => e.stopPropagation()}
+            style={{
+              width: 70, accentColor: '#00f5ff', cursor: 'pointer',
+              WebkitAppearance: 'none', appearance: 'none',
+              touchAction: 'none',
+            }}
           />
         </div>
       </div>
