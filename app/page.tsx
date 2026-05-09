@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import AudioPlayer, { type AudioPlayerHandle } from '@/components/AudioPlayer'
 import JarvisVoice from '@/components/JarvisVoice'
@@ -13,18 +13,54 @@ const ProjectsWidget = dynamic(() => import('@/components/ProjectsWidget'), { ss
 export default function Kokpit() {
   const [booted, setBooted]   = useState(false)
   const [started, setStarted] = useState(false)
-  const audioRef   = useRef<AudioPlayerHandle>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
+  const audioRef    = useRef<AudioPlayerHandle>(null)
+  const voiceElRef  = useRef<HTMLAudioElement | null>(null)
+  const voiceReady  = useRef(false)
+
+  // Pre-fetch JARVIS speech on page load so it's ready before user clicks
+  useEffect(() => {
+    const h = new Date().getHours()
+    const greeting = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
+    const text = `Good ${greeting}, sir. All systems are online and operating within normal parameters. ` +
+      `You have four active projects in the pipeline. ` +
+      `Arc reactor power at one hundred percent. Standing by for your instructions.`
+
+    fetch('/api/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    })
+      .then(r => r.ok ? r.arrayBuffer() : null)
+      .then(buf => {
+        if (!buf) return
+        const blob = new Blob([buf], { type: 'audio/mpeg' })
+        const url  = URL.createObjectURL(blob)
+        const el   = new Audio(url)
+        el.volume  = 1.0
+        el.preload = 'auto'
+        voiceElRef.current = el
+        voiceReady.current = true
+      })
+      .catch(() => {})
+  }, [])
 
   function handleStart() {
-    // Create AudioContext inside user gesture — required by iOS Safari
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctx()
-    ctx.resume()
-    audioCtxRef.current = ctx
-
-    // Unmute music also within gesture window
+    // Unmute music within gesture window
     audioRef.current?.unmute()
+
+    // Play voice within gesture window (iOS requires this)
+    if (voiceElRef.current && voiceReady.current) {
+      // Play silent first to unlock, then wait for boot animation (~2s) and restart audible
+      voiceElRef.current.volume = 0
+      voiceElRef.current.play().catch(() => {})
+      setTimeout(() => {
+        if (voiceElRef.current) {
+          voiceElRef.current.currentTime = 0
+          voiceElRef.current.volume = 1.0
+        }
+      }, 1950) // synced with boot animation (5 × 380ms = 1900ms)
+    }
+
     setStarted(true)
   }
 
@@ -65,13 +101,7 @@ export default function Kokpit() {
             <div style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(0,245,255,0.6)', fontFamily: 'Orbitron', marginBottom: 8 }}>
               // JARVIS STATUS
             </div>
-            {/* JarvisVoice only mounts after click — AudioContext is passed from gesture handler */}
-            {started && (
-              <JarvisVoice
-                audioCtx={audioCtxRef.current}
-                onBoot={() => setBooted(true)}
-              />
-            )}
+            {started && <JarvisVoice onBoot={() => setBooted(true)} />}
             <div style={{ color: 'rgba(0,245,255,0.3)', letterSpacing: 1, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', marginTop: 8 }}>
               REACTOR: 3.00 GJ/S &nbsp;|&nbsp; UPTIME: 100%
             </div>
