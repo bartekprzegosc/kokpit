@@ -14,13 +14,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid text' }, { status: 400 })
   }
 
+  // Non-streaming endpoint — returns a complete MP3 buffer (more reliable on Vercel)
   const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
     {
       method: 'POST',
       headers: {
         'xi-api-key': apiKey,
         'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
         text,
@@ -41,11 +43,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ElevenLabs request failed' }, { status: 502 })
   }
 
-  // Stream the audio back
-  return new NextResponse(res.body, {
+  // Return complete MP3 buffer
+  const audioBuffer = await res.arrayBuffer()
+  return new NextResponse(audioBuffer, {
     headers: {
       'Content-Type': 'audio/mpeg',
       'Cache-Control': 'no-store',
+      'Content-Length': String(audioBuffer.byteLength),
     },
   })
 }

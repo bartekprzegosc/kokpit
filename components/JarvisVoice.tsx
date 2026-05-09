@@ -33,15 +33,8 @@ export default function JarvisVoice({ audioCtx, onBoot }: Props) {
     if (spoken.current) return
     spoken.current = true
 
-    // Use AudioContext passed from page.tsx (created inside user gesture)
-    const ctx = audioCtx
-    if (!ctx) { console.warn('JARVIS: no AudioContext'); return }
-
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Ensure context is running (may be suspended)
-        if (ctx.state === 'suspended') await ctx.resume()
-
         const res = await fetch('/api/speak', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -50,23 +43,36 @@ export default function JarvisVoice({ audioCtx, onBoot }: Props) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
         const arrayBuffer = await res.arrayBuffer()
-        const decoded = await ctx.decodeAudioData(arrayBuffer)
-        const source = ctx.createBufferSource()
-        source.buffer = decoded
 
-        // GainNode: 1.3 = 30% louder than hardware max
-        const gain = ctx.createGain()
-        gain.gain.value = 1.3
-        source.connect(gain)
-        gain.connect(ctx.destination)
-        source.start(0)
-        return
+        // Primary: Web Audio API with gain boost (created in user gesture → iOS safe)
+        if (audioCtx && audioCtx.state !== 'closed') {
+          try {
+            if (audioCtx.state === 'suspended') await audioCtx.resume()
+            // slice() so original buffer is intact if decodeAudioData consumes it
+            const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0))
+            const source = ctx_source(audioCtx, decoded)
+            source.start(0)
+            return // success
+          } catch (webAudioErr) {
+            console.warn('JARVIS WebAudio failed, trying Audio element:', webAudioErr)
+          }
+        }
+
+        // Fallback: plain <audio> element — universally supported
+        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' })
+        const url  = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audio.volume = 1.0
+        await audio.play()
+        audio.onended = () => URL.revokeObjectURL(url)
+        return // success
+
       } catch (err) {
         console.warn(`JARVIS attempt ${attempt}:`, err)
         if (attempt < 3) await new Promise(r => setTimeout(r, 800))
       }
     }
-    console.error('JARVIS: all attempts failed, staying silent')
+    console.error('JARVIS: all attempts failed')
   }
 
   useEffect(() => {
@@ -107,4 +113,15 @@ export default function JarvisVoice({ audioCtx, onBoot }: Props) {
       )}
     </div>
   )
+}
+
+/** Create a BufferSource + GainNode (1.3×) and connect to destination */
+function ctx_source(ctx: AudioContext, decoded: AudioBuffer) {
+  const source = ctx.createBufferSource()
+  source.buffer = decoded
+  const gain = ctx.createGain()
+  gain.gain.value = 1.3
+  source.connect(gain)
+  gain.connect(ctx.destination)
+  return source
 }
