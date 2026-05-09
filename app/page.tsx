@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import AudioPlayer, { type AudioPlayerHandle } from '@/components/AudioPlayer'
-import JarvisVoice, { type JarvisVoiceHandle } from '@/components/JarvisVoice'
+import JarvisVoice from '@/components/JarvisVoice'
 
 const ArcReactor     = dynamic(() => import('@/components/ArcReactor'),     { ssr: false })
 const ClockWidget    = dynamic(() => import('@/components/ClockWidget'),    { ssr: false })
@@ -13,15 +13,27 @@ const ProjectsWidget = dynamic(() => import('@/components/ProjectsWidget'), { ss
 export default function Kokpit() {
   const [booted, setBooted]   = useState(false)
   const [started, setStarted] = useState(false)
-  const audioRef  = useRef<AudioPlayerHandle>(null)
-  const jarvisRef = useRef<JarvisVoiceHandle>(null)
+  const audioRef   = useRef<AudioPlayerHandle>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
+  function handleStart() {
+    // Create AudioContext inside user gesture — required by iOS Safari
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const ctx = new Ctx()
+    ctx.resume()
+    audioCtxRef.current = ctx
+
+    // Unmute music also within gesture window
+    audioRef.current?.unmute()
+    setStarted(true)
+  }
 
   return (
     <div className="kokpit-root">
       <div className="hud-grid" />
       <div className="scanline" />
 
-      {/* ── MAIN DASHBOARD — always in DOM ── */}
+      {/* ── MAIN DASHBOARD ── */}
       <div className="kokpit-root" style={{ zIndex: 1 }}>
 
         {/* TOP BAR */}
@@ -53,8 +65,13 @@ export default function Kokpit() {
             <div style={{ fontSize: 10, letterSpacing: 3, color: 'rgba(0,245,255,0.6)', fontFamily: 'Orbitron', marginBottom: 8 }}>
               // JARVIS STATUS
             </div>
-            {/* JarvisVoice always mounted so Audio element is pre-created and can be unlocked on click */}
-            <JarvisVoice ref={jarvisRef} onBoot={() => setBooted(true)} />
+            {/* JarvisVoice only mounts after click — AudioContext is passed from gesture handler */}
+            {started && (
+              <JarvisVoice
+                audioCtx={audioCtxRef.current}
+                onBoot={() => setBooted(true)}
+              />
+            )}
             <div style={{ color: 'rgba(0,245,255,0.3)', letterSpacing: 1, fontSize: 9, fontFamily: 'JetBrains Mono, monospace', marginTop: 8 }}>
               REACTOR: 3.00 GJ/S &nbsp;|&nbsp; UPTIME: 100%
             </div>
@@ -86,12 +103,7 @@ export default function Kokpit() {
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           background: '#0a0f1c', cursor: 'pointer',
-        }} onClick={() => {
-          // Both called within user gesture — unlocks audio on iOS
-          audioRef.current?.unmute()
-          jarvisRef.current?.unlock()
-          setStarted(true)
-        }}>
+        }} onClick={handleStart}>
           <div className="hud-grid" />
           <div className="scanline" />
 
