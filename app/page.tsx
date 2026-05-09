@@ -13,17 +13,17 @@ const ProjectsWidget = dynamic(() => import('@/components/ProjectsWidget'), { ss
 export default function Kokpit() {
   const [booted, setBooted]   = useState(false)
   const [started, setStarted] = useState(false)
-  const audioRef    = useRef<AudioPlayerHandle>(null)
-  const voiceElRef  = useRef<HTMLAudioElement | null>(null)
-  const voiceReady  = useRef(false)
+  const audioRef       = useRef<AudioPlayerHandle>(null)
+  const voiceElRef     = useRef<HTMLAudioElement | null>(null)
+  const voiceReady     = useRef(false)
+  const playWhenReady  = useRef(false)
 
   // Pre-fetch JARVIS speech on page load so it's ready before user clicks
   useEffect(() => {
     const h = new Date().getHours()
     const greeting = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
-    const text = `Good ${greeting}, sir. All systems are online and operating within normal parameters. ` +
-      `You have four active projects in the pipeline. ` +
-      `Arc reactor power at one hundred percent. Standing by for your instructions.`
+    // Short text = faster API response = ready before user clicks
+    const text = `Good ${greeting}, sir. All systems online. Arc reactor at full power. Standing by.`
 
     fetch('/api/speak', {
       method: 'POST',
@@ -40,17 +40,21 @@ export default function Kokpit() {
         el.preload = 'auto'
         voiceElRef.current = el
         voiceReady.current = true
+
+        // User already clicked before audio was ready — play now
+        if (playWhenReady.current) {
+          playWhenReady.current = false
+          el.play().catch(() => {})
+        }
       })
       .catch(() => {})
   }, [])
 
   function handleStart() {
-    // Unmute music within gesture window
     audioRef.current?.unmute()
 
-    // Play voice within gesture window (iOS requires this)
     if (voiceElRef.current && voiceReady.current) {
-      // Play silent first to unlock, then wait for boot animation (~2s) and restart audible
+      // Audio ready: unlock within gesture then play audible after boot anim
       voiceElRef.current.volume = 0
       voiceElRef.current.play().catch(() => {})
       setTimeout(() => {
@@ -58,7 +62,10 @@ export default function Kokpit() {
           voiceElRef.current.currentTime = 0
           voiceElRef.current.volume = 1.0
         }
-      }, 1950) // synced with boot animation (5 × 380ms = 1900ms)
+      }, 1950)
+    } else {
+      // Audio still fetching — flag to play as soon as it arrives
+      playWhenReady.current = true
     }
 
     setStarted(true)
