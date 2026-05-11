@@ -2,7 +2,7 @@
 import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
 
 // Direct MP3 from Internet Archive — no iframe, no YouTube API issues
-const AUDIO_SRC = 'https://archive.org/download/02ShootToThrill_201410/06%20Back%20In%20Black.mp3'
+const AUDIO_SRC = 'https://archive.org/download/02ShootToThrill_201812/06%20Back%20in%20Black.mp3'
 
 export interface AudioPlayerHandle {
   unmute: () => void
