@@ -23,7 +23,7 @@ export default function Kokpit() {
     const h = new Date().getHours()
     const greeting = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
     // Short text = faster API response = ready before user clicks
-    const text = `Good ${greeting}, sir. All systems online. Arc reactor at full power. Standing by.`
+    const text = `Good ${greeting}, sir. All systems are online and fully operational. You currently have 4 active projects in the pipeline. Arc reactor output at maximum capacity. Awaiting your commands.`
 
     fetch('/api/speak', {
       method: 'POST',
